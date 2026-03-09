@@ -44,6 +44,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { EditOperationDialog } from "@/components/operations/edit-operation-dialog";
 import { DeleteOperationDialog } from "@/components/operations/delete-operation-dialog";
+import { EditAssetDialog } from "@/components/assets/edit-asset-dialog";
 import { CurrencyInput } from "@/components/common/currency-input";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/formatters";
 import { OPERATION_TYPES } from "@/lib/constants";
@@ -112,6 +113,7 @@ export default function AtivoDetalhePage({
   const [deleting, setDeleting] = useState(false);
   const [editingOperation, setEditingOperation] = useState<any>(null);
   const [deletingOperationId, setDeletingOperationId] = useState<string | null>(null);
+  const [editingAsset, setEditingAsset] = useState(false);
   const [editingCurrentValue, setEditingCurrentValue] = useState(false);
   const [currentValueInput, setCurrentValueInput] = useState(0);
   const [savingCurrentValue, setSavingCurrentValue] = useState(false);
@@ -213,6 +215,14 @@ export default function AtivoDetalhePage({
           >
             <ArrowLeft className="mr-2 size-4" />
             Voltar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setEditingAsset(true)}
+          >
+            <Pencil className="mr-2 size-4" />
+            Editar
           </Button>
           <Button
             variant="outline"
@@ -531,6 +541,26 @@ export default function AtivoDetalhePage({
         </Card>
       </div>
 
+      <EditAssetDialog
+        asset={editingAsset && asset ? {
+          id: asset.id,
+          assetTypeId: asset.assetTypeId,
+          name: asset.name,
+          ticker: asset.ticker,
+          broker: asset.broker,
+          currency: asset.currency,
+          maturityDate: asset.maturityDate,
+          indexer: asset.indexer,
+          indexerRate: asset.indexerRate,
+          stopGainPrice: asset.stopGainPrice,
+          stopLossPrice: asset.stopLossPrice,
+          notes: asset.notes,
+          assetTypeCategory: asset.assetTypeCategory,
+        } : null}
+        open={editingAsset}
+        onOpenChange={(open) => { if (!open) setEditingAsset(false); }}
+        onSaved={() => { setEditingAsset(false); fetchAsset(); }}
+      />
       <EditOperationDialog
         operation={editingOperation}
         open={!!editingOperation}
