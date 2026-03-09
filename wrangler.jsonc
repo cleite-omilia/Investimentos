@@ -11,7 +11,7 @@
     {
       "binding": "DB",
       "database_name": "investimentos-db",
-      "database_id": "local"
+      "database_id": "5993a899-6c61-4dcd-9e42-b381b05acbfb"
     }
   ],
   "main": ".open-next/worker.js"
