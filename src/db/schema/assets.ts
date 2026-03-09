@@ -34,6 +34,8 @@ export const assets = sqliteTable("asset", {
   isActive: integer("isActive").notNull().default(1),
   stopGainPrice: real("stopGainPrice"),
   stopLossPrice: real("stopLossPrice"),
+  currentValue: integer("currentValue"), // centavos, valor atual de mercado
+  currentValueUpdatedAt: text("currentValueUpdatedAt"), // YYYY-MM-DD
   notes: text("notes"),
   createdAt: text("createdAt")
     .notNull()

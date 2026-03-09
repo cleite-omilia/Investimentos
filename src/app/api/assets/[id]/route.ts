@@ -77,6 +77,8 @@ export async function GET(
         isActive: assets.isActive,
         stopGainPrice: assets.stopGainPrice,
         stopLossPrice: assets.stopLossPrice,
+        currentValue: assets.currentValue,
+        currentValueUpdatedAt: assets.currentValueUpdatedAt,
         notes: assets.notes,
         createdAt: assets.createdAt,
         updatedAt: assets.updatedAt,
@@ -117,7 +119,9 @@ export async function GET(
     const totalQuantity = calculateQuantity(assetOperations);
     const averagePrice = calculateAveragePrice(assetOperations);
     const totalInvested = calculateTotalInvested(assetOperations);
-    const currentValue = totalQuantity * averagePrice;
+    const currentValue = assetResult.currentValue !== null
+      ? assetResult.currentValue
+      : totalQuantity * averagePrice;
     const profitLoss = currentValue - totalInvested;
 
     return NextResponse.json({
@@ -207,6 +211,8 @@ export async function PUT(
         ...(body.stopLossPrice !== undefined && {
           stopLossPrice: body.stopLossPrice ?? null,
         }),
+        ...(body.currentValue !== undefined && { currentValue: body.currentValue }),
+        ...(body.currentValueUpdatedAt !== undefined && { currentValueUpdatedAt: body.currentValueUpdatedAt }),
         ...(body.notes !== undefined && { notes: body.notes || null }),
         ...(body.assetTypeId !== undefined && {
           assetTypeId: body.assetTypeId,

@@ -10,6 +10,9 @@ import {
   TrendingUp,
   TrendingDown,
   Loader2,
+  MoreHorizontal,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/common/page-header";
@@ -32,6 +35,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EditOperationDialog } from "@/components/operations/edit-operation-dialog";
+import { DeleteOperationDialog } from "@/components/operations/delete-operation-dialog";
+import { CurrencyInput } from "@/components/common/currency-input";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/formatters";
 import { OPERATION_TYPES } from "@/lib/constants";
 
@@ -47,6 +60,8 @@ interface AssetDetail {
   indexer: string | null;
   indexerRate: number | null;
   isActive: number;
+  currentValue: number | null;
+  currentValueUpdatedAt: string | null;
   stopGainPrice: number | null;
   stopLossPrice: number | null;
   notes: string | null;
@@ -95,6 +110,11 @@ export default function AtivoDetalhePage({
   const [operations, setOperations] = useState<Operation[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  const [editingOperation, setEditingOperation] = useState<any>(null);
+  const [deletingOperationId, setDeletingOperationId] = useState<string | null>(null);
+  const [editingCurrentValue, setEditingCurrentValue] = useState(false);
+  const [currentValueInput, setCurrentValueInput] = useState(0);
+  const [savingCurrentValue, setSavingCurrentValue] = useState(false);
 
   const fetchAsset = useCallback(async () => {
     try {
@@ -128,6 +148,28 @@ export default function AtivoDetalhePage({
       toast.error("Erro ao desativar ativo");
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleSaveCurrentValue = async () => {
+    setSavingCurrentValue(true);
+    try {
+      const res = await fetch(`/api/assets/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentValue: currentValueInput,
+          currentValueUpdatedAt: new Date().toISOString().split("T")[0],
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar");
+      toast.success("Valor atual atualizado!");
+      setEditingCurrentValue(false);
+      fetchAsset();
+    } catch {
+      toast.error("Erro ao atualizar valor atual");
+    } finally {
+      setSavingCurrentValue(false);
     }
   };
 
@@ -258,6 +300,72 @@ export default function AtivoDetalhePage({
           </CardContent>
         </Card>
 
+        {/* Valor Atual de Mercado */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span>Valor Atual de Mercado</span>
+              {!editingCurrentValue && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setCurrentValueInput(
+                      asset.currentValue ?? position?.currentValue ?? 0
+                    );
+                    setEditingCurrentValue(true);
+                  }}
+                >
+                  Atualizar
+                </Button>
+              )}
+            </CardTitle>
+            <CardDescription>
+              {asset.currentValueUpdatedAt
+                ? `Atualizado em ${formatDate(asset.currentValueUpdatedAt)}`
+                : "Usando calculo baseado em operacoes"}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {editingCurrentValue ? (
+              <div className="flex items-center gap-2">
+                <CurrencyInput
+                  value={currentValueInput}
+                  onChange={setCurrentValueInput}
+                  disabled={savingCurrentValue}
+                  className="max-w-[200px]"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleSaveCurrentValue}
+                  disabled={savingCurrentValue}
+                >
+                  {savingCurrentValue ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 size-4" />
+                  )}
+                  Salvar
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditingCurrentValue(false)}
+                  disabled={savingCurrentValue}
+                >
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <p className="text-2xl font-semibold">
+                {formatCurrency(
+                  asset.currentValue ?? position?.currentValue ?? 0
+                )}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Posicao */}
         {position && (
           <Card>
@@ -369,6 +477,7 @@ export default function AtivoDetalhePage({
                       </TableHead>
                       <TableHead className="text-right">Total</TableHead>
                       <TableHead className="text-right">Taxas</TableHead>
+                      <TableHead className="w-[50px]"></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -392,6 +501,26 @@ export default function AtivoDetalhePage({
                         <TableCell className="text-right">
                           {op.fees > 0 ? formatCurrency(op.fees) : "-"}
                         </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="size-8 p-0">
+                                <MoreHorizontal className="size-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => setEditingOperation({ ...op, assetId: asset.id, assetName: asset.name })}>
+                                <Pencil className="mr-2 size-4" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem className="text-destructive" onClick={() => setDeletingOperationId(op.id)}>
+                                <Trash2 className="mr-2 size-4" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -401,6 +530,19 @@ export default function AtivoDetalhePage({
           </CardContent>
         </Card>
       </div>
+
+      <EditOperationDialog
+        operation={editingOperation}
+        open={!!editingOperation}
+        onOpenChange={(open) => { if (!open) setEditingOperation(null); }}
+        onSaved={() => { setEditingOperation(null); fetchAsset(); }}
+      />
+      <DeleteOperationDialog
+        operationId={deletingOperationId}
+        open={!!deletingOperationId}
+        onOpenChange={(open) => { if (!open) setDeletingOperationId(null); }}
+        onDeleted={() => { setDeletingOperationId(null); fetchAsset(); }}
+      />
     </div>
   );
 }

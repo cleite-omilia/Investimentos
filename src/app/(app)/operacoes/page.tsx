@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, ArrowRightLeft, CalendarIcon } from "lucide-react";
+import { Plus, ArrowRightLeft, CalendarIcon, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { usePortfolio } from "@/providers/portfolio-provider";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
@@ -27,6 +27,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { EditOperationDialog } from "@/components/operations/edit-operation-dialog";
+import { DeleteOperationDialog } from "@/components/operations/delete-operation-dialog";
 import { formatCurrency, formatDate, formatNumber } from "@/lib/formatters";
 import { OPERATION_TYPES } from "@/lib/constants";
 
@@ -78,6 +87,8 @@ export default function OperacoesPage() {
   const { activePortfolio } = usePortfolio();
   const [operations, setOperations] = useState<OperationRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingOperation, setEditingOperation] = useState<OperationRow | null>(null);
+  const [deletingOperationId, setDeletingOperationId] = useState<string | null>(null);
 
   // Filtros
   const [filterType, setFilterType] = useState<string>("all");
@@ -250,6 +261,7 @@ export default function OperacoesPage() {
                 <TableHead className="text-right">Preco Unitario</TableHead>
                 <TableHead className="text-right">Total</TableHead>
                 <TableHead className="text-right">Taxas</TableHead>
+                <TableHead className="w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -285,12 +297,45 @@ export default function OperacoesPage() {
                   <TableCell className="text-right">
                     {op.fees > 0 ? formatCurrency(op.fees) : "-"}
                   </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="size-8 p-0">
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setEditingOperation(op)}>
+                          <Pencil className="mr-2 size-4" />
+                          Editar
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="text-destructive" onClick={() => setDeletingOperationId(op.id)}>
+                          <Trash2 className="mr-2 size-4" />
+                          Excluir
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
         </div>
       )}
+
+      <EditOperationDialog
+        operation={editingOperation}
+        open={!!editingOperation}
+        onOpenChange={(open) => { if (!open) setEditingOperation(null); }}
+        onSaved={() => { setEditingOperation(null); fetchOperations(); }}
+      />
+      <DeleteOperationDialog
+        operationId={deletingOperationId}
+        open={!!deletingOperationId}
+        onOpenChange={(open) => { if (!open) setDeletingOperationId(null); }}
+        onDeleted={() => { setDeletingOperationId(null); fetchOperations(); }}
+      />
     </div>
   );
 }
