@@ -112,6 +112,12 @@ export async function GET(request: NextRequest) {
             else 0
           end
         ), 0)`.as("totalBought"),
+        totalYields: sql<number>`coalesce(sum(
+          case
+            when ${operations.type} in ('rendimento', 'dividendo', 'jcp') then ${operations.totalAmount}
+            else 0
+          end
+        ), 0)`.as("totalYields"),
         totalSold: sql<number>`coalesce(sum(
           case
             when ${operations.type} in ('venda', 'resgate', 'amortizacao') then ${operations.totalAmount}
@@ -138,14 +144,16 @@ export async function GET(request: NextRequest) {
         assets.maturityDate
       );
 
-    // Compute per-asset current value (bought - sold)
+    // Compute per-asset current value (bought + yields - sold)
     const assetsWithValue = assetPositions.map((a) => {
       const bought = Number(a.totalBought);
+      const yields = Number(a.totalYields);
       const sold = Number(a.totalSold);
-      const currentValue = bought - sold;
+      const currentValue = bought + yields - sold;
       return {
         ...a,
         bought,
+        yields,
         sold,
         currentValue,
       };
