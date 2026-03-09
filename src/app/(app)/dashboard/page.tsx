@@ -206,7 +206,8 @@ export default function DashboardPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `/api/dashboard?portfolioId=${activePortfolio.id}`
+        `/api/dashboard?portfolioId=${activePortfolio.id}`,
+        { cache: "no-store" }
       );
       if (!res.ok) throw new Error("Erro ao carregar dashboard");
       const json = (await res.json()) as any;
