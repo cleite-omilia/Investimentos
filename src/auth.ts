@@ -23,7 +23,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { drizzle } = await import("drizzle-orm/d1");
         const { eq } = await import("drizzle-orm");
         const { users } = await import("@/db/schema");
-        const bcrypt = await import("bcryptjs");
+        const bcryptModule = await import("bcryptjs");
+        const bcryptLib = bcryptModule.default || bcryptModule;
 
         const db = drizzle(env.DB);
         const [user] = await db
@@ -34,7 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         if (!user || !user.passwordHash) return null;
 
-        const isValid = await bcrypt.compare(password, user.passwordHash);
+        const isValid = await bcryptLib.compare(password, user.passwordHash);
         if (!isValid) return null;
 
         return {
