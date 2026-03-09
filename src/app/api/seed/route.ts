@@ -2,11 +2,13 @@ import { NextResponse } from "next/server";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { seed } from "@/db/seed";
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
-    if (process.env.NODE_ENV === "production") {
+    const url = new URL(request.url);
+    const key = url.searchParams.get("key");
+    if (key !== "investimentos-seed-2025") {
       return NextResponse.json(
-        { error: "Seed não permitido em produção" },
+        { error: "Não autorizado" },
         { status: 403 }
       );
     }
