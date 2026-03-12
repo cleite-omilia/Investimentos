@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Package, Loader2 } from "lucide-react";
+import { Plus, Package, Check, Loader2 } from "lucide-react";
 import { usePortfolio } from "@/providers/portfolio-provider";
 import { PageHeader } from "@/components/common/page-header";
 import { EmptyState } from "@/components/common/empty-state";
@@ -18,6 +18,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { CurrencyInput } from "@/components/common/currency-input";
+import { formatCurrency } from "@/lib/formatters";
 
 interface Asset {
   id: string;
@@ -28,8 +30,102 @@ interface Asset {
   broker: string | null;
   currency: string;
   isActive: number;
+  currentValue: number | null;
+  currentValueUpdatedAt: string | null;
   assetTypeName: string;
   assetTypeCategory: string;
+}
+
+function InlineCurrentValue({
+  asset,
+  onSaved,
+}: {
+  asset: Asset;
+  onSaved: (id: string, value: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(asset.currentValue ?? 0);
+  const [saving, setSaving] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/assets/${asset.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          currentValue: value,
+          currentValueUpdatedAt: new Date().toISOString().split("T")[0],
+        }),
+      });
+      if (!res.ok) throw new Error("Erro ao salvar");
+      toast.success(`${asset.name}: valor atualizado`);
+      onSaved(asset.id, value);
+      setEditing(false);
+    } catch {
+      toast.error("Erro ao atualizar valor");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSave();
+    } else if (e.key === "Escape") {
+      setValue(asset.currentValue ?? 0);
+      setEditing(false);
+    }
+  };
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        className="w-full text-right font-medium hover:text-primary hover:underline underline-offset-2 transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          setValue(asset.currentValue ?? 0);
+          setEditing(true);
+        }}
+      >
+        {asset.currentValue != null
+          ? formatCurrency(asset.currentValue)
+          : "—"}
+      </button>
+    );
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="flex items-center gap-1"
+      onClick={(e) => e.stopPropagation()}
+      onKeyDown={handleKeyDown}
+    >
+      <CurrencyInput
+        value={value}
+        onChange={setValue}
+        disabled={saving}
+        className="h-8 text-sm w-[130px]"
+      />
+      <Button
+        variant="ghost"
+        size="sm"
+        className="size-8 p-0"
+        onClick={handleSave}
+        disabled={saving}
+      >
+        {saving ? (
+          <Loader2 className="size-4 animate-spin" />
+        ) : (
+          <Check className="size-4" />
+        )}
+      </Button>
+    </div>
+  );
 }
 
 export default function AtivosPage() {
@@ -62,6 +158,20 @@ export default function AtivosPage() {
   useEffect(() => {
     fetchAssets();
   }, [fetchAssets]);
+
+  const handleValueSaved = (assetId: string, newValue: number) => {
+    setAssets((prev) =>
+      prev.map((a) =>
+        a.id === assetId
+          ? {
+              ...a,
+              currentValue: newValue,
+              currentValueUpdatedAt: new Date().toISOString().split("T")[0],
+            }
+          : a
+      )
+    );
+  };
 
   if (!activePortfolio) {
     return (
@@ -130,7 +240,7 @@ export default function AtivosPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Ticker</TableHead>
                 <TableHead>Corretora</TableHead>
-                <TableHead>Moeda</TableHead>
+                <TableHead className="text-right">Valor Atual</TableHead>
                 <TableHead>Status</TableHead>
               </TableRow>
             </TableHeader>
@@ -147,7 +257,12 @@ export default function AtivosPage() {
                   <TableCell className="font-medium">{asset.name}</TableCell>
                   <TableCell>{asset.ticker || "-"}</TableCell>
                   <TableCell>{asset.broker || "-"}</TableCell>
-                  <TableCell>{asset.currency}</TableCell>
+                  <TableCell className="text-right">
+                    <InlineCurrentValue
+                      asset={asset}
+                      onSaved={handleValueSaved}
+                    />
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={asset.isActive ? "default" : "outline"}

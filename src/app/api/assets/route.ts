@@ -85,6 +85,8 @@ export async function GET(request: NextRequest) {
         isActive: assets.isActive,
         stopGainPrice: assets.stopGainPrice,
         stopLossPrice: assets.stopLossPrice,
+        currentValue: assets.currentValue,
+        currentValueUpdatedAt: assets.currentValueUpdatedAt,
         notes: assets.notes,
         createdAt: assets.createdAt,
         updatedAt: assets.updatedAt,
